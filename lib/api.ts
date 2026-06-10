@@ -53,6 +53,7 @@ async function apiFetch<T>(
 ): Promise<T> {
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     ...options,
   });
 
