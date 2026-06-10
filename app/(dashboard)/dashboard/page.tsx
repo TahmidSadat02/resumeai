@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { fetchSubscription, fetchGenerationHistory, type SubscriptionInfo, type GenerationHistoryItem } from '@/lib/api';
 
@@ -18,6 +19,7 @@ const PLAN_COLORS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [user, setUser]             = useState<{ email: string; full_name?: string } | null>(null);
   const [subscription, setSub]      = useState<SubscriptionInfo | null>(null);
   const [history, setHistory]       = useState<GenerationHistoryItem[]>([]);
@@ -196,8 +198,9 @@ export default function DashboardPage() {
                   </thead>
                   <tbody>
                     {history.map(item => (
-                      <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}
-                        className="hover:bg-[var(--cream)] transition-colors">
+                      <tr key={item.id} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+                        className="hover:bg-[var(--cream)] transition-colors"
+                        onClick={() => router.push(`/history/${item.id}`)}>
                         <td className="py-3 pr-4">
                           <span className={`badge ${item.type === 'resume' ? 'badge-navy' : 'badge-gold'} text-xs`}>
                             {item.type === 'resume' ? '✦ Resume' : '◈ Cover Letter'}
