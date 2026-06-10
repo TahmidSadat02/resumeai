@@ -1,0 +1,1 @@
+// Resend transactional email setup
