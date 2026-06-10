@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { apiGenerateResume, apiGenerateCoverLetter } from '@/lib/api';
 
 type Tab = 'resume' | 'cover-letter';
@@ -25,6 +25,41 @@ const EMPTY_FORM: FormState = {
   jobDescription: '',
 };
 
+// ─── Resume JSON shape returned by Gemini ────────────────────────────────────
+
+interface ResumeData {
+  name?: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  linkedin?: string | null;
+  github?: string | null;
+  summary?: string;
+  experience?: {
+    company: string;
+    title: string;
+    start: string;
+    end: string;
+    bullets: string[];
+  }[];
+  education?: {
+    institution: string;
+    degree: string;
+    field: string;
+    graduation: string;
+  }[];
+  skills?: string[];
+  certifications?: string[];
+  projects?: {
+    name: string;
+    description: string;
+    technologies: string[];
+    url?: string | null;
+  }[];
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 function buildUserInput(f: FormState, isFresher: boolean): string {
   return [
     f.fullName     && `Name: ${f.fullName}`,
@@ -35,6 +70,247 @@ function buildUserInput(f: FormState, isFresher: boolean): string {
     f.education    && `Education: ${f.education}`,
   ].filter(Boolean).join('\n\n');
 }
+
+/** Convert resume JSON into plain text for copying to clipboard */
+function resumeToPlainText(r: ResumeData): string {
+  const lines: string[] = [];
+
+  if (r.name) lines.push(r.name.toUpperCase(), '');
+  const contact = [r.email, r.phone, r.location].filter(Boolean).join('  •  ');
+  if (contact) lines.push(contact);
+  const links = [r.linkedin, r.github].filter(Boolean).join('  •  ');
+  if (links) lines.push(links);
+  if (contact || links) lines.push('');
+
+  if (r.summary) {
+    lines.push('PROFESSIONAL SUMMARY', '─'.repeat(40), r.summary, '');
+  }
+
+  if (r.experience?.length) {
+    lines.push('WORK EXPERIENCE', '─'.repeat(40));
+    for (const exp of r.experience) {
+      lines.push(`${exp.title}  |  ${exp.company}  |  ${exp.start} – ${exp.end}`);
+      for (const b of exp.bullets) lines.push(`  • ${b}`);
+      lines.push('');
+    }
+  }
+
+  if (r.education?.length) {
+    lines.push('EDUCATION', '─'.repeat(40));
+    for (const ed of r.education) {
+      lines.push(`${ed.degree} in ${ed.field}  —  ${ed.institution} (${ed.graduation})`);
+    }
+    lines.push('');
+  }
+
+  if (r.skills?.length) {
+    lines.push('SKILLS', '─'.repeat(40), r.skills.join('  •  '), '');
+  }
+
+  if (r.projects?.length) {
+    lines.push('PROJECTS', '─'.repeat(40));
+    for (const p of r.projects) {
+      lines.push(`${p.name}${p.url ? ` — ${p.url}` : ''}`);
+      lines.push(`  ${p.description}`);
+      if (p.technologies?.length) lines.push(`  Tech: ${p.technologies.join(', ')}`);
+      lines.push('');
+    }
+  }
+
+  if (r.certifications?.length) {
+    lines.push('CERTIFICATIONS', '─'.repeat(40));
+    for (const c of r.certifications) lines.push(`  • ${c}`);
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+// ─── Section heading ─────────────────────────────────────────────────────────
+
+const SectionTitle = ({ children }: { children: React.ReactNode }) => (
+  <div style={{ marginBottom: 12 }}>
+    <h3 style={{
+      fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.12em',
+      textTransform: 'uppercase', color: 'var(--navy)', marginBottom: 6,
+    }}>
+      {children}
+    </h3>
+    <div style={{ height: 2, background: 'var(--navy)', opacity: 0.15, borderRadius: 1 }} />
+  </div>
+);
+
+// ─── Resume View component ───────────────────────────────────────────────────
+
+function ResumeView({ data }: { data: ResumeData }) {
+  const contactParts = [data.email, data.phone, data.location].filter(Boolean);
+
+  return (
+    <div style={{ fontFamily: "'Inter', 'Segoe UI', sans-serif", color: 'var(--navy)' }}>
+      {/* ── Header: Name + Contact ── */}
+      <div style={{ textAlign: 'center', marginBottom: 24, paddingBottom: 20,
+        borderBottom: '2px solid var(--navy)' }}>
+        {data.name && (
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 900, letterSpacing: '-0.02em',
+            color: 'var(--navy)', margin: 0, lineHeight: 1.2 }}>
+            {data.name}
+          </h2>
+        )}
+        {contactParts.length > 0 && (
+          <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 6 }}>
+            {contactParts.join('  ·  ')}
+          </p>
+        )}
+        {(data.linkedin || data.github) && (
+          <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 4 }}>
+            {[data.linkedin, data.github].filter(Boolean).map((link, i) => (
+              <span key={i}>
+                {i > 0 && '  ·  '}
+                {link}
+              </span>
+            ))}
+          </p>
+        )}
+      </div>
+
+      {/* ── Summary ── */}
+      {data.summary && (
+        <div style={{ marginBottom: 24 }}>
+          <SectionTitle>Professional Summary</SectionTitle>
+          <p style={{ fontSize: '0.85rem', lineHeight: 1.7, color: '#3a3a4a' }}>
+            {data.summary}
+          </p>
+        </div>
+      )}
+
+      {/* ── Experience ── */}
+      {data.experience && data.experience.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <SectionTitle>Work Experience</SectionTitle>
+          {data.experience.map((exp, i) => (
+            <div key={i} style={{ marginBottom: i < data.experience!.length - 1 ? 18 : 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 4 }}>
+                <div>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--navy)' }}>
+                    {exp.title}
+                  </span>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--muted)', marginLeft: 8 }}>
+                    {exp.company}
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--muted)', flexShrink: 0 }}>
+                  {exp.start} – {exp.end}
+                </span>
+              </div>
+              {exp.bullets?.length > 0 && (
+                <ul style={{ margin: '6px 0 0', paddingLeft: 18, listStyleType: 'disc' }}>
+                  {exp.bullets.map((b, j) => (
+                    <li key={j} style={{ fontSize: '0.8rem', lineHeight: 1.6, color: '#3a3a4a', marginBottom: 2 }}>
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Education ── */}
+      {data.education && data.education.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <SectionTitle>Education</SectionTitle>
+          {data.education.map((ed, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
+              <div>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--navy)' }}>
+                  {ed.degree} in {ed.field}
+                </span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--muted)', marginLeft: 8 }}>
+                  {ed.institution}
+                </span>
+              </div>
+              <span style={{ fontSize: '0.75rem', color: 'var(--muted)', flexShrink: 0 }}>
+                {ed.graduation}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Skills ── */}
+      {data.skills && data.skills.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <SectionTitle>Skills</SectionTitle>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {data.skills.map((skill, i) => (
+              <span key={i} style={{
+                display: 'inline-block', padding: '4px 12px', borderRadius: 20,
+                fontSize: '0.75rem', fontWeight: 600,
+                background: 'var(--cream-dark, #eee8dc)', color: 'var(--navy)',
+              }}>
+                {skill}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Projects ── */}
+      {data.projects && data.projects.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <SectionTitle>Projects</SectionTitle>
+          {data.projects.map((proj, i) => (
+            <div key={i} style={{ marginBottom: i < data.projects!.length - 1 ? 16 : 0 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--navy)' }}>
+                  {proj.name}
+                </span>
+                {proj.url && (
+                  <span style={{ fontSize: '0.7rem', color: 'var(--gold, #b8860b)' }}>
+                    {proj.url}
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize: '0.8rem', lineHeight: 1.6, color: '#3a3a4a', margin: '4px 0' }}>
+                {proj.description}
+              </p>
+              {proj.technologies?.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                  {proj.technologies.map((t, j) => (
+                    <span key={j} style={{
+                      display: 'inline-block', padding: '2px 8px', borderRadius: 4,
+                      fontSize: '0.65rem', fontWeight: 600,
+                      border: '1px solid var(--border, #d5d0c6)', color: 'var(--muted)',
+                    }}>
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Certifications ── */}
+      {data.certifications && data.certifications.length > 0 && (
+        <div>
+          <SectionTitle>Certifications</SectionTitle>
+          <ul style={{ margin: 0, paddingLeft: 18, listStyleType: 'disc' }}>
+            {data.certifications.map((cert, i) => (
+              <li key={i} style={{ fontSize: '0.8rem', lineHeight: 1.6, color: '#3a3a4a' }}>
+                {cert}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Input field ─────────────────────────────────────────────────────────────
 
 const InputField = ({
   id, label, required, placeholder, value, error, multiline, rows, onChange,
@@ -61,6 +337,8 @@ const InputField = ({
   </div>
 );
 
+// ─── Page ────────────────────────────────────────────────────────────────────
+
 export default function GeneratePage() {
   const [tab, setTab]             = useState<Tab>('resume');
   const [form, setForm]           = useState<FormState>(EMPTY_FORM);
@@ -70,6 +348,16 @@ export default function GeneratePage() {
   const [output, setOutput]       = useState<string>('');
   const [copied, setCopied]       = useState(false);
   const [isFresher, setIsFresher] = useState(false);
+
+  // Parse resume JSON for formatted view
+  const parsedResume = useMemo<ResumeData | null>(() => {
+    if (!output || tab !== 'resume') return null;
+    try {
+      return JSON.parse(output) as ResumeData;
+    } catch {
+      return null;
+    }
+  }, [output, tab]);
 
   const set = (field: keyof FormState, value: string) => {
     setForm(f => ({ ...f, [field]: value }));
@@ -96,17 +384,17 @@ export default function GeneratePage() {
       const userInput = buildUserInput(form, isFresher);
       if (tab === 'resume') {
         const { resume } = await apiGenerateResume(userInput, form.jobDescription);
-        // Pretty-print if JSON, else show raw
-        try { setOutput(JSON.stringify(JSON.parse(resume), null, 2)); }
-        catch { setOutput(resume); }
+        setOutput(resume);
       } else {
         const { coverLetter } = await apiGenerateCoverLetter(userInput, form.jobDescription);
         setOutput(coverLetter);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Generation failed. Please try again.';
-      if (msg.includes('limit')) {
+      if (msg.includes('Generation limit reached')) {
         setApiError('You have reached your monthly generation limit. Please upgrade your plan.');
+      } else if (msg.includes('rate limit') || msg.includes('quota')) {
+        setApiError('The AI service is temporarily busy. Please try again in a minute.');
       } else if (msg.includes('Unauthenticated')) {
         setApiError('Your session expired. Please log in again.');
       } else {
@@ -118,17 +406,16 @@ export default function GeneratePage() {
   }
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(output);
+    // If we have parsed resume data, copy the nicely formatted plain text
+    const textToCopy = parsedResume ? resumeToPlainText(parsedResume) : output;
+    await navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
   function handleDownloadPDF() {
-    // Placeholder — PDF generation requires a Pro+ plan
     window.print();
   }
-
-
 
   return (
     <div>
@@ -242,10 +529,15 @@ export default function GeneratePage() {
           {!loading && output && (
             <div className="animate-fade-in flex-1 overflow-auto">
               {tab === 'resume' ? (
-                <pre className="text-xs leading-relaxed whitespace-pre-wrap"
-                  style={{ color: 'var(--navy)', fontFamily: 'var(--font-geist-mono, monospace)' }}>
-                  {output}
-                </pre>
+                parsedResume ? (
+                  <ResumeView data={parsedResume} />
+                ) : (
+                  /* Fallback: raw text if JSON parsing failed */
+                  <pre className="text-xs leading-relaxed whitespace-pre-wrap"
+                    style={{ color: 'var(--navy)', fontFamily: 'var(--font-geist-mono, monospace)' }}>
+                    {output}
+                  </pre>
+                )
               ) : (
                 <div className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--navy)' }}>
                   {output}
@@ -258,3 +550,4 @@ export default function GeneratePage() {
     </div>
   );
 }
+

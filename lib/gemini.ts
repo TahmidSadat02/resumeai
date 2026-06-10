@@ -16,9 +16,9 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // ---------------------------------------------------------------------------
 
 const MODEL_MAP: Record<PlanType, string> = {
-  free:    'gemini-2.5-flash-lite-preview-06-17',
-  pro:     'gemini-2.5-flash-preview-05-20',
-  premium: 'gemini-2.5-pro-preview-06-05',
+  free:    'gemini-2.5-flash',
+  pro:     'gemini-2.5-flash',
+  premium: 'gemini-2.5-pro',
 };
 
 // ---------------------------------------------------------------------------
