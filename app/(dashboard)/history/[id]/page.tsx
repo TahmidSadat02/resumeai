@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, use } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { ResumeData, resumeToPlainText, ResumeView } from '@/components/ResumeView';
 import Link from 'next/link';
@@ -14,7 +14,9 @@ interface GenerationDetail {
   created_at: string;
 }
 
-export default function HistoryDetailPage({ params }: { params: { id: string } }) {
+export default function HistoryDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
+  const { id } = resolvedParams;
   const [data, setData] = useState<GenerationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -34,7 +36,7 @@ export default function HistoryDetailPage({ params }: { params: { id: string } }
       const { data: gen, error: fetchErr } = await supabase
         .from('generations')
         .select('id, type, title, output_content, model_version, created_at')
-        .eq('id', params.id)
+        .eq('id', id)
         .eq('user_id', user.id)
         .single();
 
@@ -47,7 +49,7 @@ export default function HistoryDetailPage({ params }: { params: { id: string } }
     }
     
     load();
-  }, [params.id]);
+  }, [id]);
 
   const parsedResume = useMemo<ResumeData | null>(() => {
     if (!data?.output_content || data.type !== 'resume') return null;
