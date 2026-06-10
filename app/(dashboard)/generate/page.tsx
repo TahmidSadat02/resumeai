@@ -29,6 +29,19 @@ const EMPTY_FORM: FormState = {
 
 import { ResumeData, resumeToPlainText, ResumeView } from '@/components/ResumeView';
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function buildUserInput(f: FormState, isFresher: boolean): string {
+  return [
+    f.fullName     && `Name: ${f.fullName}`,
+    f.email        && `Email: ${f.email}`,
+    f.targetJob    && `Target Job: ${f.targetJob}`,
+    isFresher ? `Experience: None (Fresher/Recent Graduate)` : (f.experience && `Experience:\n${f.experience}`),
+    f.skills       && `Skills: ${f.skills}`,
+    f.education    && `Education: ${f.education}`,
+  ].filter(Boolean).join('\n\n');
+}
+
 // ─── Input field ─────────────────────────────────────────────────────────────
 
 const InputField = ({
