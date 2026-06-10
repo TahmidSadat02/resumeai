@@ -15,9 +15,18 @@ import type { PlanType } from '@/types/database';
  */
 export async function POST(request: NextRequest) {
   try {
-    // ── 1. Authenticate user ─────────────────────────────────────────────────
+    // ── 1. Parse request body FIRST (Fixes Next.js POST hanging bug) ─────────
+    const body = await request.json() as {
+      userInput?: string;
+      jobDescription?: string;
+    };
+
+    const { userInput, jobDescription } = body;
+
+    // ── 2. Authenticate user ─────────────────────────────────────────────────
     const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    const user = session?.user;
 
     if (authError || !user) {
       return NextResponse.json(
@@ -25,14 +34,6 @@ export async function POST(request: NextRequest) {
         { status: 401 },
       );
     }
-
-    // ── 2. Parse and validate request body ───────────────────────────────────
-    const body = await request.json() as {
-      userInput?: string;
-      jobDescription?: string;
-    };
-
-    const { userInput, jobDescription } = body;
 
     if (!userInput || typeof userInput !== 'string' || userInput.trim() === '') {
       return NextResponse.json(

@@ -25,12 +25,12 @@ const EMPTY_FORM: FormState = {
   jobDescription: '',
 };
 
-function buildUserInput(f: FormState): string {
+function buildUserInput(f: FormState, isFresher: boolean): string {
   return [
     f.fullName     && `Name: ${f.fullName}`,
     f.email        && `Email: ${f.email}`,
     f.targetJob    && `Target Job: ${f.targetJob}`,
-    f.experience   && `Experience:\n${f.experience}`,
+    isFresher ? `Experience: None (Fresher/Recent Graduate)` : (f.experience && `Experience:\n${f.experience}`),
     f.skills       && `Skills: ${f.skills}`,
     f.education    && `Education: ${f.education}`,
   ].filter(Boolean).join('\n\n');
@@ -69,6 +69,7 @@ export default function GeneratePage() {
   const [apiError, setApiError]   = useState('');
   const [output, setOutput]       = useState<string>('');
   const [copied, setCopied]       = useState(false);
+  const [isFresher, setIsFresher] = useState(false);
 
   const set = (field: keyof FormState, value: string) => {
     setForm(f => ({ ...f, [field]: value }));
@@ -79,7 +80,7 @@ export default function GeneratePage() {
   const validate = useCallback(() => {
     const e: Partial<FormState> = {};
     if (!form.fullName.trim())     e.fullName     = 'Required.';
-    if (!form.experience.trim())   e.experience   = 'Required.';
+    if (!isFresher && !form.experience.trim())   e.experience   = 'Required.';
     if (!form.jobDescription.trim()) e.jobDescription = 'Required.';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -92,7 +93,7 @@ export default function GeneratePage() {
     setOutput('');
 
     try {
-      const userInput = buildUserInput(form);
+      const userInput = buildUserInput(form, isFresher);
       if (tab === 'resume') {
         const { resume } = await apiGenerateResume(userInput, form.jobDescription);
         // Pretty-print if JSON, else show raw
@@ -160,9 +161,21 @@ export default function GeneratePage() {
             value={form.email} onChange={val => set('email', val)} />
           <InputField id="targetJob" label="Target Job Title" placeholder="Senior Software Engineer"
             value={form.targetJob} onChange={val => set('targetJob', val)} />
-          <InputField id="experience" label="Work Experience" required multiline rows={5}
-            placeholder="Describe your roles, responsibilities, and achievements…"
-            value={form.experience} error={errors.experience} onChange={val => set('experience', val)} />
+
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="fresher" checked={isFresher} onChange={e => setIsFresher(e.target.checked)} />
+              <label htmlFor="fresher" className="text-sm font-medium cursor-pointer" style={{ color: 'var(--navy)' }}>
+                I am a fresher (no work experience)
+              </label>
+            </div>
+            {!isFresher && (
+              <InputField id="experience" label="Work Experience" required multiline rows={5}
+                placeholder="Describe your roles, responsibilities, and achievements…"
+                value={form.experience} error={errors.experience} onChange={val => set('experience', val)} />
+            )}
+          </div>
+
           <InputField id="skills" label="Skills" placeholder="TypeScript, React, Node.js, PostgreSQL…"
             value={form.skills} onChange={val => set('skills', val)} />
           <InputField id="education" label="Education"
