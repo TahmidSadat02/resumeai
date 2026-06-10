@@ -36,6 +36,31 @@ function buildUserInput(f: FormState): string {
   ].filter(Boolean).join('\n\n');
 }
 
+const InputField = ({
+  id, label, required, placeholder, value, error, multiline, rows, onChange,
+}: {
+  id: string; label: string; required?: boolean; placeholder: string;
+  value: string; error?: string; multiline?: boolean; rows?: number;
+  onChange: (val: string) => void;
+}) => (
+  <div>
+    <label htmlFor={id} className="input-label">
+      {label}{required && <span style={{ color: 'var(--error)' }}> *</span>}
+    </label>
+    {multiline ? (
+      <textarea id={id} rows={rows ?? 4} placeholder={placeholder}
+        className={`input-field resize-y ${error ? 'error' : ''}`}
+        style={{ minHeight: 96 }}
+        value={value} onChange={e => onChange(e.target.value)} />
+    ) : (
+      <input id={id} type="text" placeholder={placeholder}
+        className={`input-field ${error ? 'error' : ''}`}
+        value={value} onChange={e => onChange(e.target.value)} />
+    )}
+    {error && <p className="text-xs mt-1" style={{ color: 'var(--error)' }}>{error}</p>}
+  </div>
+);
+
 export default function GeneratePage() {
   const [tab, setTab]             = useState<Tab>('resume');
   const [form, setForm]           = useState<FormState>(EMPTY_FORM);
@@ -102,29 +127,7 @@ export default function GeneratePage() {
     window.print();
   }
 
-  const InputField = ({
-    id, label, required, placeholder, value, error, multiline, rows,
-  }: {
-    id: keyof FormState; label: string; required?: boolean; placeholder: string;
-    value: string; error?: string; multiline?: boolean; rows?: number;
-  }) => (
-    <div>
-      <label htmlFor={id} className="input-label">
-        {label}{required && <span style={{ color: 'var(--error)' }}> *</span>}
-      </label>
-      {multiline ? (
-        <textarea id={id} rows={rows ?? 4} placeholder={placeholder}
-          className={`input-field resize-y ${error ? 'error' : ''}`}
-          style={{ minHeight: 96 }}
-          value={value} onChange={e => set(id, e.target.value)} />
-      ) : (
-        <input id={id} type="text" placeholder={placeholder}
-          className={`input-field ${error ? 'error' : ''}`}
-          value={value} onChange={e => set(id, e.target.value)} />
-      )}
-      {error && <p className="text-xs mt-1" style={{ color: 'var(--error)' }}>{error}</p>}
-    </div>
-  );
+
 
   return (
     <div>
@@ -152,22 +155,22 @@ export default function GeneratePage() {
         {/* ── Form ── */}
         <div className="card p-6 flex flex-col gap-5">
           <InputField id="fullName" label="Full Name" required placeholder="Tahmid Sadat"
-            value={form.fullName} error={errors.fullName} />
+            value={form.fullName} error={errors.fullName} onChange={val => set('fullName', val)} />
           <InputField id="email" label="Email" placeholder="you@example.com"
-            value={form.email} />
+            value={form.email} onChange={val => set('email', val)} />
           <InputField id="targetJob" label="Target Job Title" placeholder="Senior Software Engineer"
-            value={form.targetJob} />
+            value={form.targetJob} onChange={val => set('targetJob', val)} />
           <InputField id="experience" label="Work Experience" required multiline rows={5}
             placeholder="Describe your roles, responsibilities, and achievements…"
-            value={form.experience} error={errors.experience} />
+            value={form.experience} error={errors.experience} onChange={val => set('experience', val)} />
           <InputField id="skills" label="Skills" placeholder="TypeScript, React, Node.js, PostgreSQL…"
-            value={form.skills} />
+            value={form.skills} onChange={val => set('skills', val)} />
           <InputField id="education" label="Education"
             placeholder="BSc Computer Science, University of Dhaka, 2022"
-            value={form.education} />
+            value={form.education} onChange={val => set('education', val)} />
           <InputField id="jobDescription" label="Target Job Description" required multiline rows={5}
             placeholder="Paste the full job description here…"
-            value={form.jobDescription} error={errors.jobDescription} />
+            value={form.jobDescription} error={errors.jobDescription} onChange={val => set('jobDescription', val)} />
 
           {apiError && <div className="alert-error">{apiError}</div>}
 
