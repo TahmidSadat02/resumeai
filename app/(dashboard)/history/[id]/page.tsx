@@ -96,7 +96,7 @@ export default function HistoryDetailPage({ params }: { params: Promise<{ id: st
   return (
     <div>
       {/* Header */}
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
         <div>
           <Link href="/dashboard" className="text-sm font-semibold mb-2 inline-block no-underline" style={{ color: 'var(--gold)' }}>
             ← Back to Dashboard

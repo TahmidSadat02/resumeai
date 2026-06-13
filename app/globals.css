@@ -342,18 +342,12 @@ body {
 
 /* ── Print Styles ────────────────────────────────────────── */
 @media print {
-  /* Hide non-printable app UI elements */
+  /* Hide non-printable elements */
+  .no-print,
   aside,
   header,
-  .mb-8,
-  .tab-bar,
-  .mb-6, /* format selector */
-  .grid > :first-child, /* Left column of the generate page (form) */
-  .btn-outline,
-  .tooltip,
-  .alert-error,
-  .btn-primary,
-  button {
+  button,
+  .tooltip {
     display: none !important;
   }
 

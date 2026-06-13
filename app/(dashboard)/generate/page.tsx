@@ -274,7 +274,7 @@ export default function GeneratePage() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-8 no-print">
         <h1 className="text-2xl font-black tracking-tight mb-1" style={{ color: 'var(--navy)' }}>
           Generate
         </h1>
@@ -284,7 +284,7 @@ export default function GeneratePage() {
       </div>
 
       {/* Tabs */}
-      <div className="tab-bar mb-8">
+      <div className="tab-bar mb-8 no-print">
         {([['resume', '✦ Resume'], ['cover-letter', '◈ Cover Letter']] as [Tab, string][]).map(([key, label]) => (
           <button key={key} onClick={() => { setTab(key); setOutput(''); setApiError(''); }}
             className={`tab-item ${tab === key ? 'active' : ''}`}>
@@ -295,7 +295,7 @@ export default function GeneratePage() {
 
       {/* Format Selector Toggle */}
       {tab === 'resume' && (
-        <div className="mb-6 flex items-center gap-3 bg-white p-3 rounded-xl border" style={{ borderColor: 'var(--border)' }}>
+        <div className="mb-6 flex items-center gap-3 bg-white p-3 rounded-xl border no-print" style={{ borderColor: 'var(--border)' }}>
           <span className="text-sm font-bold flex items-center gap-1.5" style={{ color: 'var(--navy)' }}>
             Resume Format
             <span className="tooltip">
@@ -338,7 +338,7 @@ export default function GeneratePage() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* ── Form ── */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 no-print">
 
           {/* ─── Personal Info ─── */}
           <Section title="Personal Information" badge="required" defaultOpen>
@@ -488,7 +488,7 @@ export default function GeneratePage() {
 
         {/* ── Output ── */}
         <div className={`card p-6 flex flex-col ${format === 'ats' ? 'ats-mode' : 'standard-mode'}`} style={{ minHeight: 480, maxHeight: 'calc(100vh - 48px)', position: 'sticky', top: 24, alignSelf: 'start' }}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 no-print">
             <h2 className="font-bold text-base" style={{ color: 'var(--navy)' }}>
               {tab === 'resume' ? 'Resume Output' : 'Cover Letter Output'}
             </h2>
