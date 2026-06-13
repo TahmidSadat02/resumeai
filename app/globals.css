@@ -397,30 +397,38 @@ body {
     max-width: 100% !important;
   }
 
-  /* ATS mode print typography override (1 inch margins, Times New Roman, 11pt) */
+  /* ATS mode print typography override (1 inch margins, Times New Roman, 11px) */
   .ats-mode .ats-resume-print-view {
-    font-family: 'Times New Roman', Times, Arial, serif !important;
-    font-size: 11pt !important;
+    font-family: 'Times New Roman', Times, Georgia, serif !important;
+    font-size: 11px !important;
     color: #000 !important;
     background: #fff !important;
-    line-height: 1.5 !important;
+    line-height: 1.4 !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
   }
 
   .ats-mode .ats-resume-print-view * {
-    font-family: 'Times New Roman', Times, Arial, serif !important;
-    font-size: 11pt !important;
+    font-family: 'Times New Roman', Times, Georgia, serif !important;
+    font-size: 11px !important;
     color: #000 !important;
   }
 
-  .ats-mode .ats-resume-print-view .font-bold {
+  .ats-mode .ats-resume-print-view .font-bold,
+  .ats-mode .ats-resume-print-view h1,
+  .ats-mode .ats-resume-print-view h2,
+  .ats-mode .ats-resume-print-view span {
     font-weight: bold !important;
   }
 
-  /* Enforce standard 1 inch page margin for resumes */
+  .ats-mode .ats-resume-print-view h1 {
+    font-size: 24px !important;
+  }
+
+  /* Enforce standard A4 size and 1 inch page margin for resumes */
   @page {
+    size: A4;
     margin: 1in !important;
   }
 }

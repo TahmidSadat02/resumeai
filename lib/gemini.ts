@@ -79,22 +79,59 @@ Return this exact JSON schema (fill in values based on the inputs):
 `.trim();
 
 const ATS_RESUME_SYSTEM_PROMPT = `
-You are an expert ATS resume writer. Generate a perfectly ATS-optimized resume in clean plain text format.
+You are an elite expert ATS resume writer and career coach.
+Your task is to generate a perfectly ATS-optimized resume structure in JSON format.
 
-Strict ATS rules:
-- Single column layout only, no tables, no columns
-- Section headers in ALL CAPS followed by a line of dashes
-- Bullet points using simple hyphens (-)
-- No special characters, icons, or symbols
-- No text boxes, no borders, no graphics
-- Date format: Month Year - Month Year (right aligned with spaces)
-- Standard section order: SUMMARY, EXPERIENCE, EDUCATION, SKILLS, PROJECTS, CERTIFICATIONS, ACHIEVEMENTS
-- Keep font-independent — no bold, italic, or underline markers
-- Every bullet starts with a strong action verb
-- Quantify achievements wherever possible
-- Mirror exact keywords from the job description naturally
+CRITICAL FORMATTING RULES:
+1. Return ONLY valid JSON — no markdown, no code fences, no commentary outside the JSON.
+2. Structure bullet points and descriptions strictly for ATS success:
+   - Single column layout logic, no tables, no custom graphics.
+   - Bullet points must start with strong, active verbs.
+   - Quantify achievements with metrics, percentages, and dollar amounts wherever possible.
+   - Mirror exact key tech terms and keywords from the job description naturally.
+3. If any section or field is empty or missing from user inputs, omit it or set it to an empty array/string as appropriate. Never hallucinate tools or institutions.
 
-Output the resume as a plain text string exactly as it should appear, not as JSON. No markdown, no backticks, no formatting.
+Return this exact JSON schema:
+{
+  "name": "string",
+  "phone": "string",
+  "email": "string",
+  "linkedin": "string",
+  "github": "string",
+  "education": [
+    {
+      "institution": "string",
+      "location": "string",
+      "degree": "string",
+      "field": "string",
+      "graduation": "string",
+      "cgpa": "string"
+    }
+  ],
+  "projects": [
+    {
+      "name": "string",
+      "technologies": "comma-separated list of technologies used",
+      "url": "string",
+      "bullets": [
+        "string"
+      ]
+    }
+  ],
+  "skills": {
+    "languages": "comma-separated list",
+    "frameworks": "comma-separated list",
+    "databases": "comma-separated list",
+    "tools": "comma-separated list"
+  },
+  "certifications": [
+    {
+      "name": "string",
+      "issuer": "string",
+      "year": "string"
+    }
+  ]
+}
 `.trim();
 
 const COVER_LETTER_SYSTEM_PROMPT = `
@@ -177,11 +214,17 @@ Generate the resume ${format === 'ats' ? 'text' : 'JSON'} now.
   if (format === 'ats') {
     // Strip markdown code fences if the model accidentally added them
     const cleaned = text
-      .replace(/^```(?:text|plain)?\n?/i, '')
+      .replace(/^```(?:json)?\n?/i, '')
       .replace(/\n?```$/i, '')
-      .replace(/^`/g, '')
-      .replace(/`$/g, '')
       .trim();
+
+    // Validate it is parseable JSON before returning
+    try {
+      JSON.parse(cleaned);
+    } catch {
+      throw new Error(`Gemini ATS response is not valid JSON:\n${cleaned}`);
+    }
+
     return cleaned;
   }
 

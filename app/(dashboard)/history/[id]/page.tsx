@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, use } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { ResumeData, resumeToPlainText, ResumeView, ATSResumeView } from '@/components/ResumeView';
+import { ResumeData, ResumeATSData, resumeToPlainText, resumeATSToPlainText, ResumeView, ResumeATSView } from '@/components/ResumeView';
 import Link from 'next/link';
 
 interface GenerationDetail {
@@ -51,10 +51,27 @@ export default function HistoryDetailPage({ params }: { params: Promise<{ id: st
     load();
   }, [id]);
 
+  const parsedATSResume = useMemo<ResumeATSData | null>(() => {
+    if (!data?.output_content || data.type !== 'resume') return null;
+    try {
+      const parsed = JSON.parse(data.output_content);
+      if (parsed && typeof parsed.skills === 'object' && !Array.isArray(parsed.skills)) {
+        return parsed as ResumeATSData;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }, [data]);
+
   const parsedResume = useMemo<ResumeData | null>(() => {
     if (!data?.output_content || data.type !== 'resume') return null;
     try {
-      return JSON.parse(data.output_content) as ResumeData;
+      const parsed = JSON.parse(data.output_content);
+      if (parsed && Array.isArray(parsed.skills)) {
+        return parsed as ResumeData;
+      }
+      return null;
     } catch {
       return null;
     }
@@ -62,14 +79,25 @@ export default function HistoryDetailPage({ params }: { params: Promise<{ id: st
 
   async function handleCopy() {
     if (!data?.output_content) return;
-    const textToCopy = parsedResume ? resumeToPlainText(parsedResume) : data.output_content;
+    const textToCopy = parsedResume 
+      ? resumeToPlainText(parsedResume) 
+      : parsedATSResume 
+        ? resumeATSToPlainText(parsedATSResume) 
+        : data.output_content;
     await navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
   function handleDownloadPDF() {
+    const rawName = (data?.type === 'resume' ? (parsedResume?.name || parsedATSResume?.name) : null) || data?.title || 'My';
+    const name = typeof rawName === 'string' ? rawName.trim() : 'My';
+    const originalTitle = document.title;
+    document.title = `${name.replace(/\s+/g, '_')}_Resume`;
     window.print();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 100);
   }
 
   if (loading) {
@@ -127,14 +155,20 @@ export default function HistoryDetailPage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* Output */}
-      <div className={`card p-8 ${!parsedResume && data.type === 'resume' ? 'ats-mode' : 'standard-mode'}`}>
+      <div className={`card p-8 ${parsedATSResume ? 'ats-mode' : 'standard-mode'}`}>
         {!data.output_content ? (
            <p className="text-sm" style={{ color: 'var(--muted)' }}>No content was generated or saved for this entry.</p>
         ) : data.type === 'resume' ? (
           parsedResume ? (
             <ResumeView data={parsedResume} />
+          ) : parsedATSResume ? (
+            <ResumeATSView data={parsedATSResume} />
           ) : (
-            <ATSResumeView text={data.output_content} />
+            /* Fallback: raw text if JSON parsing failed */
+            <pre className="text-xs leading-relaxed whitespace-pre-wrap"
+              style={{ color: 'var(--navy)', fontFamily: 'var(--font-geist-mono, monospace)' }}>
+              {data.output_content}
+            </pre>
           )
         ) : (
           <div className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--navy)' }}>

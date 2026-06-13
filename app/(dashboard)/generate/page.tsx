@@ -58,7 +58,7 @@ const EMPTY_PROJECT: ProjectEntry = { name: '', description: '', technologies: '
 
 // ─── Resume JSON shape returned by Gemini ────────────────────────────────────
 
-import { ResumeData, resumeToPlainText, ResumeView, ATSResumeView } from '@/components/ResumeView';
+import { ResumeData, ResumeATSData, resumeToPlainText, resumeATSToPlainText, ResumeView, ResumeATSView } from '@/components/ResumeView';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -188,13 +188,23 @@ export default function GeneratePage() {
 
   // Parse resume JSON for formatted view
   const parsedResume = useMemo<ResumeData | null>(() => {
-    if (!output || tab !== 'resume') return null;
+    if (!output || tab !== 'resume' || format === 'ats') return null;
     try {
       return JSON.parse(output) as ResumeData;
     } catch {
       return null;
     }
-  }, [output, tab]);
+  }, [output, tab, format]);
+
+  // Parse ATS resume JSON
+  const parsedATSResume = useMemo<ResumeATSData | null>(() => {
+    if (!output || tab !== 'resume' || format !== 'ats') return null;
+    try {
+      return JSON.parse(output) as ResumeATSData;
+    } catch {
+      return null;
+    }
+  }, [output, tab, format]);
 
   const set = (field: keyof FormState, value: string) => {
     setForm(f => ({ ...f, [field]: value }));
@@ -261,14 +271,25 @@ export default function GeneratePage() {
 
   async function handleCopy() {
     // If we have parsed resume data, copy the nicely formatted plain text
-    const textToCopy = format === 'standard' && parsedResume ? resumeToPlainText(parsedResume) : output;
+    const textToCopy = format === 'standard' && parsedResume 
+      ? resumeToPlainText(parsedResume) 
+      : format === 'ats' && parsedATSResume 
+        ? resumeATSToPlainText(parsedATSResume) 
+        : output;
     await navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
   function handleDownloadPDF() {
+    const rawName = form.fullName || (tab === 'resume' ? (format === 'ats' ? parsedATSResume?.name : parsedResume?.name) : null) || 'My';
+    const name = rawName.trim() || 'My';
+    const originalTitle = document.title;
+    document.title = `${name.replace(/\s+/g, '_')}_Resume`;
     window.print();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 100);
   }
 
   return (
@@ -531,10 +552,18 @@ export default function GeneratePage() {
           )}
 
           {!loading && output && (
-            <div className="animate-fade-in flex-1 overflow-auto">
+            <div className="animate-fade-in flex-1 overflow-auto print-section">
               {tab === 'resume' ? (
                 format === 'ats' ? (
-                  <ATSResumeView text={output} />
+                  parsedATSResume ? (
+                    <ResumeATSView data={parsedATSResume} />
+                  ) : (
+                    /* Fallback: raw text if JSON parsing failed */
+                    <pre className="text-xs leading-relaxed whitespace-pre-wrap"
+                      style={{ color: 'var(--navy)', fontFamily: 'var(--font-geist-mono, monospace)' }}>
+                      {output}
+                    </pre>
+                  )
                 ) : parsedResume ? (
                   <ResumeView data={parsedResume} />
                 ) : (

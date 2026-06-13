@@ -1,5 +1,38 @@
 import React from 'react';
 
+export interface ResumeATSData {
+  name: string;
+  phone: string;
+  email: string;
+  linkedin: string;
+  github: string;
+  education: {
+    institution: string;
+    location: string;
+    degree: string;
+    field: string;
+    graduation: string;
+    cgpa?: string;
+  }[];
+  projects: {
+    name: string;
+    technologies: string;
+    url?: string;
+    bullets: string[];
+  }[];
+  skills: {
+    languages: string;
+    frameworks: string;
+    databases: string;
+    tools: string;
+  };
+  certifications: {
+    name: string;
+    issuer: string;
+    year: string;
+  }[];
+}
+
 export interface ResumeData {
   name?: string;
   email?: string;
@@ -80,6 +113,53 @@ export function resumeToPlainText(r: ResumeData): string {
     lines.push('CERTIFICATIONS', '─'.repeat(40));
     for (const c of r.certifications) lines.push(`  • ${c}`);
     lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+export function resumeATSToPlainText(r: ResumeATSData): string {
+  const lines: string[] = [];
+
+  if (r.name) lines.push(r.name.toUpperCase(), '');
+  const contact = [r.phone, r.email, r.linkedin, r.github].filter(Boolean).join('  |  ');
+  if (contact) lines.push(contact, '');
+
+  if (r.education?.length) {
+    lines.push('EDUCATION', '—'.repeat(40));
+    for (const ed of r.education) {
+      lines.push(`${ed.institution}  |  ${ed.location}`);
+      lines.push(`${ed.degree} in ${ed.field}  —  ${ed.graduation}`);
+      if (ed.cgpa) lines.push(`  • CGPA: ${ed.cgpa}`);
+      lines.push('');
+    }
+  }
+
+  if (r.projects?.length) {
+    lines.push('PROJECTS', '—'.repeat(40));
+    for (const p of r.projects) {
+      lines.push(`${p.name}${p.technologies ? ` | ${p.technologies}` : ''}  —  ${p.url || ''}`);
+      for (const b of p.bullets) lines.push(`  • ${b}`);
+      lines.push('');
+    }
+  }
+
+  if (r.skills) {
+    lines.push('TECHNICAL SKILLS', '—'.repeat(40));
+    if (r.skills.languages) lines.push(`Languages: ${r.skills.languages}`);
+    if (r.skills.frameworks) lines.push(`Frameworks & Libraries: ${r.skills.frameworks}`);
+    if (r.skills.databases) lines.push(`Databases & Backend: ${r.skills.databases}`);
+    if (r.skills.tools) lines.push(`Tools & Platforms: ${r.skills.tools}`);
+    lines.push('');
+  }
+
+  if (r.certifications?.length) {
+    lines.push('CERTIFICATIONS', '—'.repeat(40));
+    for (const c of r.certifications) {
+      lines.push(`${c.name}`);
+      lines.push(`  ${c.issuer} — ${c.year}`);
+      lines.push('');
+    }
   }
 
   return lines.join('\n');
@@ -265,44 +345,153 @@ export function ResumeView({ data }: { data: ResumeData }) {
   );
 }
 
-export function ATSResumeView({ text }: { text: string }) {
-  const lines = text.split('\n');
+export function ResumeATSView({ data }: { data: ResumeATSData }) {
   return (
-    <div 
-      className="ats-resume-print-view text-left p-8 bg-white text-black"
+    <div
+      className="ats-resume-print-view text-left text-black bg-white"
       style={{
-        fontFamily: "var(--font-geist-mono), Courier, monospace",
+        fontFamily: "'Times New Roman', Times, Georgia, serif",
+        fontSize: '11px',
         color: '#000',
         backgroundColor: '#fff',
-        minHeight: '100%',
-        lineHeight: '1.5',
-        fontSize: '0.875rem',
+        lineHeight: '1.4',
+        padding: '2rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        width: '100%',
+        boxSizing: 'border-box',
       }}
     >
-      {lines.map((line, i) => {
-        const trimmed = line.trim();
-        const isHeader = /^[A-Z\s]{3,30}$/.test(trimmed) && lines[i + 1]?.trim().startsWith('---');
-        const isDivider = trimmed.startsWith('---');
+      {/* ── Header ── */}
+      <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 6px 0', color: '#000' }}>
+          {data.name}
+        </h1>
+        <div style={{ fontSize: '11px', color: '#000' }}>
+          {[
+            data.phone,
+            data.email,
+            data.linkedin,
+            data.github
+          ].filter(Boolean).join(' | ')}
+        </div>
+      </div>
 
-        if (isHeader) {
-          return (
-            <div key={i} className="font-bold uppercase text-black mt-6 mb-1 text-sm tracking-wide">
-              {trimmed}
+      {/* ── Education ── */}
+      {data.education && data.education.length > 0 && (
+        <div>
+          <h2 style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', margin: '0 0 2px 0', color: '#000' }}>
+            EDUCATION
+          </h2>
+          <div style={{ borderBottom: '1px solid #000', marginBottom: '6px' }} />
+          {data.education.map((edu, idx) => (
+            <div key={idx} style={{ marginBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+                <span>{edu.institution}</span>
+                <span>{edu.location}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontStyle: 'italic' }}>
+                <span>{edu.degree}{edu.field ? ` in ${edu.field}` : ''}</span>
+                <span style={{ fontStyle: 'normal' }}>{edu.graduation}</span>
+              </div>
+              {edu.cgpa && (
+                <ul style={{ margin: '2px 0 0 0', paddingLeft: '20px', listStyleType: 'disc' }}>
+                  <li>CGPA: {edu.cgpa}</li>
+                </ul>
+              )}
             </div>
-          );
-        }
-        if (isDivider) {
-          return (
-            <div key={i} className="border-b border-black mb-4 opacity-40" />
-          );
-        }
+          ))}
+        </div>
+      )}
 
-        return (
-          <div key={i} className="whitespace-pre min-h-[1.5em]">
-            {line}
+      {/* ── Projects ── */}
+      {data.projects && data.projects.length > 0 && (
+        <div>
+          <h2 style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', margin: '0 0 2px 0', color: '#000' }}>
+            PROJECTS
+          </h2>
+          <div style={{ borderBottom: '1px solid #000', marginBottom: '6px' }} />
+          {data.projects.map((proj, idx) => (
+            <div key={idx} style={{ marginBottom: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div>
+                  <span style={{ fontWeight: 'bold' }}>{proj.name}</span>
+                  {proj.technologies && (
+                    <span style={{ marginLeft: '6px', color: '#000' }}>
+                      | {proj.technologies}
+                    </span>
+                  )}
+                </div>
+                {proj.url && (
+                  <span style={{ fontSize: '11px' }}>{proj.url}</span>
+                )}
+              </div>
+              {proj.bullets && proj.bullets.length > 0 && (
+                <ul style={{ margin: '4px 0 0 0', paddingLeft: '20px', listStyleType: 'disc' }}>
+                  {proj.bullets.map((bullet, bIdx) => (
+                    <li key={bIdx} style={{ marginBottom: '2px' }}>{bullet}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Technical Skills ── */}
+      {data.skills && (
+        <div>
+          <h2 style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', margin: '0 0 2px 0', color: '#000' }}>
+            TECHNICAL SKILLS
+          </h2>
+          <div style={{ borderBottom: '1px solid #000', marginBottom: '6px' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {data.skills.languages && (
+              <div>
+                <span style={{ fontWeight: 'bold' }}>Languages: </span>
+                <span>{data.skills.languages}</span>
+              </div>
+            )}
+            {data.skills.frameworks && (
+              <div>
+                <span style={{ fontWeight: 'bold' }}>Frameworks & Libraries: </span>
+                <span>{data.skills.frameworks}</span>
+              </div>
+            )}
+            {data.skills.databases && (
+              <div>
+                <span style={{ fontWeight: 'bold' }}>Databases & Backend: </span>
+                <span>{data.skills.databases}</span>
+              </div>
+            )}
+            {data.skills.tools && (
+              <div>
+                <span style={{ fontWeight: 'bold' }}>Tools & Platforms: </span>
+                <span>{data.skills.tools}</span>
+              </div>
+            )}
           </div>
-        );
-      })}
+        </div>
+      )}
+
+      {/* ── Certifications ── */}
+      {data.certifications && data.certifications.length > 0 && (
+        <div>
+          <h2 style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', margin: '0 0 2px 0', color: '#000' }}>
+            CERTIFICATIONS
+          </h2>
+          <div style={{ borderBottom: '1px solid #000', marginBottom: '6px' }} />
+          {data.certifications.map((cert, idx) => (
+            <div key={idx} style={{ marginBottom: '8px' }}>
+              <div style={{ fontWeight: 'bold' }}>{cert.name}</div>
+              <div style={{ fontSize: '11px', color: '#000' }}>
+                {cert.issuer}{cert.year ? ` — ${cert.year}` : ''}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
