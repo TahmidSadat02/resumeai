@@ -78,6 +78,25 @@ Return this exact JSON schema (fill in values based on the inputs):
 }
 `.trim();
 
+const ATS_RESUME_SYSTEM_PROMPT = `
+You are an expert ATS resume writer. Generate a perfectly ATS-optimized resume in clean plain text format.
+
+Strict ATS rules:
+- Single column layout only, no tables, no columns
+- Section headers in ALL CAPS followed by a line of dashes
+- Bullet points using simple hyphens (-)
+- No special characters, icons, or symbols
+- No text boxes, no borders, no graphics
+- Date format: Month Year - Month Year (right aligned with spaces)
+- Standard section order: SUMMARY, EXPERIENCE, EDUCATION, SKILLS, PROJECTS, CERTIFICATIONS, ACHIEVEMENTS
+- Keep font-independent — no bold, italic, or underline markers
+- Every bullet starts with a strong action verb
+- Quantify achievements wherever possible
+- Mirror exact keywords from the job description naturally
+
+Output the resume as a plain text string exactly as it should appear, not as JSON. No markdown, no backticks, no formatting.
+`.trim();
+
 const COVER_LETTER_SYSTEM_PROMPT = `
 You are an expert cover letter writer and career strategist.
 Your cover letters are known for being compelling, concise, and highly personalised.
@@ -130,10 +149,12 @@ export async function generateResume(
   userInput: string,
   jobDescription: string,
   model: string,
+  format: 'standard' | 'ats' = 'standard',
 ): Promise<string> {
+  const systemInstruction = format === 'ats' ? ATS_RESUME_SYSTEM_PROMPT : RESUME_SYSTEM_PROMPT;
   const geminiModel = genAI.getGenerativeModel({
     model,
-    systemInstruction: RESUME_SYSTEM_PROMPT,
+    systemInstruction,
   });
 
   const userPrompt = `
@@ -143,7 +164,7 @@ ${userInput}
 TARGET JOB DESCRIPTION:
 ${jobDescription}
 
-Generate the resume JSON now.
+Generate the resume ${format === 'ats' ? 'text' : 'JSON'} now.
 `.trim();
 
   const result = await geminiModel.generateContent(userPrompt);
@@ -151,6 +172,17 @@ Generate the resume JSON now.
 
   if (!text) {
     throw new Error('Gemini returned an empty response for resume generation.');
+  }
+
+  if (format === 'ats') {
+    // Strip markdown code fences if the model accidentally added them
+    const cleaned = text
+      .replace(/^```(?:text|plain)?\n?/i, '')
+      .replace(/\n?```$/i, '')
+      .replace(/^`/g, '')
+      .replace(/`$/g, '')
+      .trim();
+    return cleaned;
   }
 
   // Strip markdown code fences if the model accidentally added them

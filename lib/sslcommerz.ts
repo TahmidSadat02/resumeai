@@ -1,10 +1,4 @@
-// sslcommerz-lts ships as a plain CommonJS module with no bundled types
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const SSLCommerzPayment = require('sslcommerz-lts') as new (
-  storeId: string,
-  storePassword: string,
-  isLive: boolean,
-) => SSLCommerzInstance;
+// We use native fetch to call the SSLCommerz API to avoid CommonJS/ESM bundling issues in Next.js
 
 // ---------------------------------------------------------------------------
 // Minimal type surface for the sslcommerz-lts instance
@@ -56,10 +50,7 @@ interface SSLCommerzValidationResponse {
   error?: string;
 }
 
-interface SSLCommerzInstance {
-  init(data: SSLCommerzInitData): Promise<SSLCommerzInitResponse>;
-  validate(data: { val_id: string }): Promise<SSLCommerzValidationResponse>;
-}
+
 
 // ---------------------------------------------------------------------------
 // Environment validation — fail fast at startup
@@ -139,44 +130,68 @@ export async function initializePayment(
   plan: BillablePlan,
   amount: number,
 ): Promise<InitPaymentResult> {
-  const sslcz: SSLCommerzInstance = new SSLCommerzPayment(
-    STORE_ID!,
-    STORE_PASSWORD!,
-    IS_LIVE,
-  );
+  const baseURL = `https://${IS_LIVE ? 'securepay' : 'sandbox'}.sslcommerz.com`;
+  const initURL = `${baseURL}/gwprocess/v4/api.php`;
 
   // Unique transaction ID: userId + timestamp to handle multiple attempts
   const tranId = `${userId}_${Date.now()}`;
 
-  const data: SSLCommerzInitData = {
-    total_amount:     amount,
-    currency:         'BDT',
-    tran_id:          tranId,
-    // SSLCommerz posts to these URLs after payment
-    success_url:      `${APP_URL}/api/payment/success`,
-    fail_url:         `${APP_URL}/api/payment/fail`,
-    cancel_url:       `${APP_URL}/api/payment/cancel`,
-    ipn_url:          `${APP_URL}/api/payment/success`, // IPN mirrors success handler
-    product_name:     `ResumeAI ${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan`,
-    product_category: 'SaaS Subscription',
-    product_profile:  'non-physical-goods',
-    // Customer fields — SSLCommerz requires these even for digital goods
-    cus_name:         'ResumeAI User',
-    cus_email:        `${userId}@resumeai.app`, // replaced server-side with real email
-    cus_add1:         'Dhaka',
-    cus_city:         'Dhaka',
-    cus_country:      'Bangladesh',
-    cus_phone:        '01700000000',
-    // Shipping — not applicable for digital products but required by SSLCommerz
-    shipping_method:  'NO',
-    ship_name:        'Digital Delivery',
-    ship_add1:        'N/A',
-    ship_city:        'Dhaka',
-    ship_country:     'Bangladesh',
-    num_of_item:      1,
-  };
+  const params = new URLSearchParams();
+  params.append('store_id', STORE_ID!);
+  params.append('store_passwd', STORE_PASSWORD!);
+  params.append('total_amount', amount.toString());
+  params.append('currency', 'BDT');
+  params.append('tran_id', tranId);
+  params.append('success_url', `${APP_URL}/api/payment/success`);
+  params.append('fail_url', `${APP_URL}/api/payment/fail`);
+  params.append('cancel_url', `${APP_URL}/api/payment/cancel`);
+  params.append('ipn_url', `${APP_URL}/api/payment/success`);
+  params.append('product_name', `ResumeAI ${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan`);
+  params.append('product_category', 'SaaS Subscription');
+  params.append('product_profile', 'non-physical-goods');
+  params.append('cus_name', 'ResumeAI User');
+  params.append('cus_email', `${userId}@resumeai.app`);
+  params.append('cus_add1', 'Dhaka');
+  params.append('cus_city', 'Dhaka');
+  params.append('cus_country', 'Bangladesh');
+  params.append('cus_phone', '01700000000');
+  params.append('shipping_method', 'NO');
+  params.append('ship_name', 'Digital Delivery');
+  params.append('ship_add1', 'N/A');
+  params.append('ship_city', 'Dhaka');
+  params.append('ship_country', 'Bangladesh');
+  params.append('num_of_item', '1');
 
-  const response = await sslcz.init(data);
+  // SSLCommerz library also appends empty strings for all other possible optional fields.
+  // We'll map them here to match expected data structures exactly.
+  const optionalFields = [
+    'productcategory', 'multi_card_name', 'allowed_bin', 'emi_option',
+    'emi_max_inst_option', 'emi_selected_inst', 'cus_add2', 'cus_state',
+    'cus_postcode', 'cus_fax', 'shipcity', 'ship_add2', 'ship_state',
+    'ship_postcode', 'ship_country', 'hours_till_departure', 'flight_type',
+    'pnr', 'journey_from_to', 'third_party_booking', 'hotel_name',
+    'length_of_stay', 'check_in_time', 'hotel_city', 'product_type',
+    'topup_number', 'country_topup', 'cart', 'product_amount',
+    'discount_amount', 'convenience_fee', 'value_a', 'value_b',
+    'value_c', 'value_d'
+  ];
+  for (const field of optionalFields) {
+    params.append(field, '');
+  }
+
+  const res = await fetch(initURL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: params.toString(),
+  });
+
+  if (!res.ok) {
+    throw new Error(`SSLCommerz init request failed with status ${res.status}`);
+  }
+
+  const response = (await res.json()) as SSLCommerzInitResponse;
 
   if (response.status !== 'SUCCESS' || !response.GatewayPageURL) {
     throw new Error(
@@ -209,13 +224,18 @@ export async function initializePayment(
 export async function verifyPayment(
   valId: string,
 ): Promise<VerifyPaymentResult> {
-  const sslcz: SSLCommerzInstance = new SSLCommerzPayment(
-    STORE_ID!,
-    STORE_PASSWORD!,
-    IS_LIVE,
-  );
+  const baseURL = `https://${IS_LIVE ? 'securepay' : 'sandbox'}.sslcommerz.com`;
+  const validationURL = `${baseURL}/validator/api/validationserverAPI.php?val_id=${valId}&store_id=${STORE_ID}&store_passwd=${STORE_PASSWORD}&v=1&format=json`;
 
-  const response = await sslcz.validate({ val_id: valId });
+  const res = await fetch(validationURL, {
+    method: 'GET',
+  });
+
+  if (!res.ok) {
+    throw new Error(`SSLCommerz verification request failed with status ${res.status}`);
+  }
+
+  const response = (await res.json()) as SSLCommerzValidationResponse;
 
   const success =
     response.status === 'VALID' || response.status === 'VALIDATED';

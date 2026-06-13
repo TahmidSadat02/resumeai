@@ -288,3 +288,146 @@ body {
   to   { opacity: 1; }
 }
 .animate-fade-in { animation: fadeIn 0.4s ease both; }
+
+/* ── Collapsible form sections ───────────────────────────── */
+.form-section {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+.form-section:has([open]) {
+  border-color: var(--navy);
+}
+.form-section summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--navy);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+.form-section summary::-webkit-details-marker { display: none; }
+.form-section summary::before {
+  content: '▸';
+  font-size: 0.75rem;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.form-section details[open] > summary::before {
+  transform: rotate(90deg);
+}
+.form-section summary:hover {
+  background: var(--cream-dark);
+}
+.form-section .section-body {
+  padding: 0 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.form-section summary .section-badge {
+  margin-left: auto;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Print Styles ────────────────────────────────────────── */
+@media print {
+  /* Hide non-printable app UI elements */
+  aside,
+  header,
+  .mb-8,
+  .tab-bar,
+  .mb-6, /* format selector */
+  .grid > :first-child, /* Left column of the generate page (form) */
+  .btn-outline,
+  .tooltip,
+  .alert-error,
+  .btn-primary,
+  button {
+    display: none !important;
+  }
+
+  /* Reset layout constraints for paper size compatibility */
+  body, html {
+    background: #fff !important;
+    color: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: auto !important;
+  }
+
+  .min-h-screen,
+  main,
+  .grid {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  .card {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-height: none !important;
+    position: relative !important;
+    top: 0 !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .overflow-auto,
+  .overflow-y-auto {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Standard mode adjustments to occupy full width */
+  .standard-mode {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* ATS mode print typography override (1 inch margins, Times New Roman, 11pt) */
+  .ats-mode .ats-resume-print-view {
+    font-family: 'Times New Roman', Times, Arial, serif !important;
+    font-size: 11pt !important;
+    color: #000 !important;
+    background: #fff !important;
+    line-height: 1.5 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  .ats-mode .ats-resume-print-view * {
+    font-family: 'Times New Roman', Times, Arial, serif !important;
+    font-size: 11pt !important;
+    color: #000 !important;
+  }
+
+  .ats-mode .ats-resume-print-view .font-bold {
+    font-weight: bold !important;
+  }
+
+  /* Enforce standard 1 inch page margin for resumes */
+  @page {
+    margin: 1in !important;
+  }
+}
+

@@ -264,3 +264,45 @@ export function ResumeView({ data }: { data: ResumeData }) {
     </div>
   );
 }
+
+export function ATSResumeView({ text }: { text: string }) {
+  const lines = text.split('\n');
+  return (
+    <div 
+      className="ats-resume-print-view text-left p-8 bg-white text-black"
+      style={{
+        fontFamily: "var(--font-geist-mono), Courier, monospace",
+        color: '#000',
+        backgroundColor: '#fff',
+        minHeight: '100%',
+        lineHeight: '1.5',
+        fontSize: '0.875rem',
+      }}
+    >
+      {lines.map((line, i) => {
+        const trimmed = line.trim();
+        const isHeader = /^[A-Z\s]{3,30}$/.test(trimmed) && lines[i + 1]?.trim().startsWith('---');
+        const isDivider = trimmed.startsWith('---');
+
+        if (isHeader) {
+          return (
+            <div key={i} className="font-bold uppercase text-black mt-6 mb-1 text-sm tracking-wide">
+              {trimmed}
+            </div>
+          );
+        }
+        if (isDivider) {
+          return (
+            <div key={i} className="border-b border-black mb-4 opacity-40" />
+          );
+        }
+
+        return (
+          <div key={i} className="whitespace-pre min-h-[1.5em]">
+            {line}
+          </div>
+        );
+      })}
+    </div>
+  );
+}

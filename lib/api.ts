@@ -70,15 +70,16 @@ async function apiFetch<T>(
 
 /**
  * Sends user input to the resume generation API route.
- * @returns The generated resume as a JSON string.
+ * @returns The generated resume as a JSON string (standard) or plain text (ats).
  */
 export async function apiGenerateResume(
   userInput: string,
   jobDescription: string,
+  format: 'standard' | 'ats' = 'standard',
 ): Promise<GenerateResumeResult> {
   return apiFetch<GenerateResumeResult>('/api/generate/resume', {
     method: 'POST',
-    body: JSON.stringify({ userInput, jobDescription }),
+    body: JSON.stringify({ userInput, jobDescription, format }),
   });
 }
 

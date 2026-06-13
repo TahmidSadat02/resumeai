@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, use } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { ResumeData, resumeToPlainText, ResumeView } from '@/components/ResumeView';
+import { ResumeData, resumeToPlainText, ResumeView, ATSResumeView } from '@/components/ResumeView';
 import Link from 'next/link';
 
 interface GenerationDetail {
@@ -127,17 +127,14 @@ export default function HistoryDetailPage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* Output */}
-      <div className="card p-8">
+      <div className={`card p-8 ${!parsedResume && data.type === 'resume' ? 'ats-mode' : 'standard-mode'}`}>
         {!data.output_content ? (
            <p className="text-sm" style={{ color: 'var(--muted)' }}>No content was generated or saved for this entry.</p>
         ) : data.type === 'resume' ? (
           parsedResume ? (
             <ResumeView data={parsedResume} />
           ) : (
-            <pre className="text-xs leading-relaxed whitespace-pre-wrap"
-              style={{ color: 'var(--navy)', fontFamily: 'var(--font-geist-mono, monospace)' }}>
-              {data.output_content}
-            </pre>
+            <ATSResumeView text={data.output_content} />
           )
         ) : (
           <div className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--navy)' }}>

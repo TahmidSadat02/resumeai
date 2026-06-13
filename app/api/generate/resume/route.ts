@@ -19,9 +19,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as {
       userInput?: string;
       jobDescription?: string;
+      format?: 'standard' | 'ats';
     };
 
-    const { userInput, jobDescription } = body;
+    const { userInput, jobDescription, format = 'standard' } = body;
 
     // ── 2. Authenticate user ─────────────────────────────────────────────────
     const supabase = await createClient();
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     // ── 5. Select model based on plan and call Gemini ────────────────────────
     const model  = selectModel(subscription.plan as PlanType);
-    const resume = await generateResume(userInput.trim(), jobDescription.trim(), model);
+    const resume = await generateResume(userInput.trim(), jobDescription.trim(), model, format);
 
     // ── 6. Increment usage counter in subscriptions ──────────────────────────
     await supabase
