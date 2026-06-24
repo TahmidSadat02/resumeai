@@ -40,9 +40,13 @@ export default function BillingPage() {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      setEmail(user?.email ?? '');
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+      setEmail(user.email ?? '');
 
-      const sub = await fetchSubscription();
+      const sub = await fetchSubscription(user.id);
       setSub(sub);
 
       // Build payment history from subscription if a transaction exists
@@ -61,7 +65,7 @@ export default function BillingPage() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [router]);
 
   async function handleUpgrade(plan: 'pro' | 'premium') {
     if (!subscription) return;
@@ -245,7 +249,7 @@ export default function BillingPage() {
         <div className="card p-6 border" style={{ borderColor: '#FECACA' }}>
           <p className="font-bold mb-1" style={{ color: 'var(--error)' }}>Cancel Subscription</p>
           <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>
-            You'll keep access until your billing period ends. After that, your plan reverts to Free.
+            You&apos;ll keep access until your billing period ends. After that, your plan reverts to Free.
           </p>
           <button onClick={handleCancel} disabled={cancelling}
             className="btn-outline" style={{ borderColor: 'var(--error)', color: 'var(--error)' }}>

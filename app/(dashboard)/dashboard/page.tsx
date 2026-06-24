@@ -27,33 +27,36 @@ export default function DashboardPage() {
   const [loading, setLoading]       = useState(true);
 
   useEffect(() => {
-    // Check for payment callback query param
-    const params = new URLSearchParams(window.location.search);
-    const payment = params.get('payment');
-    if (payment === 'success') setPaymentMsg('🎉 Payment successful! Your plan has been upgraded.');
-    if (payment === 'failed')  setPaymentMsg('❌ Payment failed. Please try again.');
-    if (payment === 'cancelled') setPaymentMsg('Payment was cancelled.');
-
     async function load() {
       const supabase = createClient();
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
-        setUser({
-          email:     authUser.email ?? '',
-          full_name: authUser.user_metadata?.full_name,
-        });
+      if (!authUser) {
+        router.push('/login');
+        return;
       }
 
+      // Check for payment callback query param
+      const params = new URLSearchParams(window.location.search);
+      const payment = params.get('payment');
+      if (payment === 'success') setPaymentMsg('🎉 Payment successful! Your plan has been upgraded.');
+      if (payment === 'failed')  setPaymentMsg('❌ Payment failed. Please try again.');
+      if (payment === 'cancelled') setPaymentMsg('Payment was cancelled.');
+
+      setUser({
+        email:     authUser.email ?? '',
+        full_name: authUser.user_metadata?.full_name,
+      });
+
       const [sub, hist] = await Promise.all([
-        fetchSubscription(),
-        fetchGenerationHistory(),
+        fetchSubscription(authUser.id),
+        fetchGenerationHistory(authUser.id),
       ]);
       setSub(sub);
       setHistory(hist);
       setLoading(false);
     }
     load();
-  }, []);
+  }, [router]);
 
   const usagePercent = subscription
     ? Math.min(100, Math.round((subscription.generations_used / subscription.generation_limit) * 100))

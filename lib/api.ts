@@ -120,15 +120,13 @@ import { createClient } from '@/lib/supabase/client';
 /**
  * Fetches the authenticated user's subscription row.
  */
-export async function fetchSubscription(): Promise<SubscriptionInfo | null> {
+export async function fetchSubscription(userId: string): Promise<SubscriptionInfo | null> {
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
 
   const { data } = await supabase
     .from('subscriptions')
     .select('plan,status,generation_limit,generations_used,current_period_end,amount_paid,transaction_id')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .single();
 
   return data as SubscriptionInfo | null;
@@ -137,15 +135,13 @@ export async function fetchSubscription(): Promise<SubscriptionInfo | null> {
 /**
  * Fetches the authenticated user's generation history (most recent 50).
  */
-export async function fetchGenerationHistory(): Promise<GenerationHistoryItem[]> {
+export async function fetchGenerationHistory(userId: string): Promise<GenerationHistoryItem[]> {
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
 
   const { data } = await supabase
     .from('generations')
     .select('id,type,title,is_saved,model_version,created_at')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(50);
 
