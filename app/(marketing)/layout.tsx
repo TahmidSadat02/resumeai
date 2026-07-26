@@ -1,10 +1,43 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { apiSignOut } from '@/lib/api';
+import { User } from '@supabase/supabase-js';
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+    const supabase = createClient();
+    
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  async function handleSignOut() {
+    await apiSignOut();
+    setUser(null);
+    router.push('/');
+    router.refresh();
+  }
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--cream)' }}>
@@ -34,12 +67,25 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
 
           {/* CTA buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/login" className="btn-outline" style={{ padding: '0.5rem 1.25rem', fontSize: '0.875rem' }}>
-              Sign In
-            </Link>
-            <Link href="/signup" className="btn-primary" style={{ padding: '0.5rem 1.25rem', fontSize: '0.875rem' }}>
-              Get Started
-            </Link>
+            {mounted && user ? (
+              <>
+                <Link href="/dashboard" className="btn-outline" style={{ padding: '0.5rem 1.25rem', fontSize: '0.875rem' }}>
+                  Dashboard
+                </Link>
+                <button onClick={handleSignOut} className="btn-primary" style={{ padding: '0.5rem 1.25rem', fontSize: '0.875rem', cursor: 'pointer' }}>
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="btn-outline" style={{ padding: '0.5rem 1.25rem', fontSize: '0.875rem' }}>
+                  Sign In
+                </Link>
+                <Link href="/signup" className="btn-primary" style={{ padding: '0.5rem 1.25rem', fontSize: '0.875rem' }}>
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile hamburger */}
@@ -61,8 +107,17 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 onClick={() => setMenuOpen(false)}>{label}</Link>
             ))}
             <div className="flex gap-3 pt-1">
-              <Link href="/login" className="btn-outline flex-1 text-center" style={{ padding: '0.5rem', fontSize: '0.875rem' }}>Sign In</Link>
-              <Link href="/signup" className="btn-primary flex-1 text-center" style={{ padding: '0.5rem', fontSize: '0.875rem' }}>Get Started</Link>
+              {mounted && user ? (
+                <>
+                  <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="btn-outline flex-1 text-center" style={{ padding: '0.5rem', fontSize: '0.875rem' }}>Dashboard</Link>
+                  <button onClick={() => { handleSignOut(); setMenuOpen(false); }} className="btn-primary flex-1 text-center cursor-pointer" style={{ padding: '0.5rem', fontSize: '0.875rem' }}>Sign Out</button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" onClick={() => setMenuOpen(false)} className="btn-outline flex-1 text-center" style={{ padding: '0.5rem', fontSize: '0.875rem' }}>Sign In</Link>
+                  <Link href="/signup" onClick={() => setMenuOpen(false)} className="btn-primary flex-1 text-center" style={{ padding: '0.5rem', fontSize: '0.875rem' }}>Get Started</Link>
+                </>
+              )}
             </div>
           </div>
         )}
